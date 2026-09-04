@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { guestWord } from "@/lib/pluralize";
 
 const SIZES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -22,7 +23,7 @@ export function PartySizeSelect({
         <SelectContent>
           {SIZES.map((size) => (
             <SelectItem key={size} value={String(size)}>
-              {size} {size === 1 ? "guest" : "guests"}
+              {size} {guestWord(size)}
             </SelectItem>
           ))}
         </SelectContent>

@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/error-banner";
 import { SlotRow } from "./slot-row";
 import type { SlotView } from "@/lib/apiClient";
 
@@ -34,14 +35,7 @@ export function SlotList({
   }
 
   if (state.status === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-        <p className="text-sm text-destructive">{state.message}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          Try again
-        </Button>
-      </div>
-    );
+    return <ErrorBanner message={state.message} onRetry={onRetry} />;
   }
 
   if (state.slots.length === 0) {

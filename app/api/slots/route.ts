@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { slotsQuerySchema } from "@/lib/validation";
 import { findSlotsForDate, findNextAvailableDate } from "@/lib/slots";
+import { validationErrorResponse } from "@/lib/apiResponse";
 
 export async function GET(request: NextRequest) {
   const parsed = slotsQuerySchema.safeParse({
@@ -8,10 +9,7 @@ export async function GET(request: NextRequest) {
     partySize: request.nextUrl.searchParams.get("partySize") ?? undefined,
   });
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid_request", message: parsed.error.issues[0]?.message ?? "Invalid request" },
-      { status: 400 },
-    );
+    return validationErrorResponse(parsed.error);
   }
 
   const slots = await findSlotsForDate(parsed.data.date);

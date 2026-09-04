@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { pool } from "../lib/db";
 import { createBooking, findBookingsByReferenceAndEmail, cancelBooking } from "../lib/booking";
+import { createTestSitting, deleteTestSitting } from "./helpers";
 
 describe("booking lookup and cancel authorization", () => {
   let slotId: string;
@@ -9,12 +10,7 @@ describe("booking lookup and cancel authorization", () => {
   const ownerEmail = "owner@example.com";
 
   beforeAll(async () => {
-    const sitting = await pool.query(
-      `insert into sittings (date, start_time, timezone, capacity)
-       values (current_date + 31, '19:00', 'Asia/Kolkata', 10)
-       returning id`,
-    );
-    slotId = sitting.rows[0].id;
+    slotId = await createTestSitting(pool, { capacity: 10, daysAhead: 31 });
 
     const result = await createBooking({
       slotId,
@@ -30,8 +26,7 @@ describe("booking lookup and cancel authorization", () => {
   });
 
   afterAll(async () => {
-    await pool.query("delete from bookings where slot_id = $1", [slotId]);
-    await pool.query("delete from sittings where id = $1", [slotId]);
+    await deleteTestSitting(pool, slotId);
     await pool.end();
   });
 

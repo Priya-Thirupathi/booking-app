@@ -1,52 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { DateField } from "./date-field";
 import { PartySizeSelect } from "./party-size-select";
 import { SlotList, type SlotListState } from "./slot-list";
 import { BookingDialog } from "./booking-dialog";
-import { fetchSlots, ApiError, type SlotView } from "@/lib/apiClient";
+import { fetchSlots, getErrorMessage, type SlotView } from "@/lib/apiClient";
 import { todayInViewerTimezone } from "@/lib/formatSitting";
+import { useAsyncState } from "@/lib/useAsyncState";
 
-// A pure fetch — no setState inside it — used by both the mount/change effect and the retry
-// button. Keeping it setState-free (rather than a `load()` that calls setState itself) is what
-// lets the effect below satisfy react-hooks/set-state-in-effect: state only ever changes inside
-// a `.then()` callback, never synchronously in the effect body.
+// Pure — no setState inside — so useAsyncState's mount effect only ever sets state inside a
+// `.then()` callback, never synchronously in the effect body (satisfies react-hooks/set-state-in-effect).
 async function loadSlots(date: string, partySize: number): Promise<SlotListState> {
   try {
     const res = await fetchSlots(date, partySize);
     return { status: "loaded", slots: res.slots, nextAvailableDate: res.nextAvailableDate ?? null };
   } catch (err) {
-    return {
-      status: "error",
-      message: err instanceof ApiError ? err.message : "Couldn't load sittings.",
-    };
+    return { status: "error", message: getErrorMessage(err, "Couldn't load sittings.") };
   }
 }
 
 export function BookingFlow() {
   const [date, setDate] = useState(todayInViewerTimezone);
   const [partySize, setPartySize] = useState(2);
-  const [listState, setListState] = useState<SlotListState>({ status: "loading" });
   const [selectedSlot, setSelectedSlot] = useState<SlotView | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    loadSlots(date, partySize).then((result) => {
-      if (!cancelled) setListState(result);
-    });
-    // Guards against a slow response for a since-changed date/party-size overwriting a newer
-    // one — without this, switching dates quickly could show stale slots.
-    return () => {
-      cancelled = true;
-    };
-  }, [date, partySize]);
-
-  function refresh() {
-    setListState({ status: "loading" });
-    loadSlots(date, partySize).then(setListState);
-  }
+  const { state: listState, refresh } = useAsyncState<SlotListState>(
+    () => loadSlots(date, partySize),
+    { status: "loading" },
+    [date, partySize],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-8 sm:py-12">

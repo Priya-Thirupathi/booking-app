@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { lookupBookings, ApiError } from "@/lib/apiClient";
+import { ErrorBanner } from "@/components/error-banner";
+import { lookupBookings, getErrorMessage } from "@/lib/apiClient";
 import type { BookingView } from "@/lib/bookingView";
 
 export function LookupForm({ onFound }: { onFound: (bookings: BookingView[]) => void }) {
@@ -29,7 +30,7 @@ export function LookupForm({ onFound }: { onFound: (bookings: BookingView[]) => 
         setEmail("");
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -41,11 +42,7 @@ export function LookupForm({ onFound }: { onFound: (bookings: BookingView[]) => 
         <h2 className="text-sm font-medium">Booked on another device?</h2>
         <p className="text-xs text-muted-foreground">Look it up with your reference and email.</p>
       </div>
-      {error && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {error && <ErrorBanner message={error} compact />}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1.5">
           <Label htmlFor="lookup-reference">Reference</Label>

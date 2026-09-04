@@ -1,6 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { pool } from "../lib/db";
 import { createBooking } from "../lib/booking";
+import { createTestSitting, deleteTestSitting } from "./helpers";
 
 // The headline test. 20 concurrent parties of 2 against a 10-seat sitting must produce exactly
 // 5 successes and land seats_taken at exactly 10 — never 6 successes (oversold), never a lost
@@ -11,12 +12,7 @@ describe("concurrent booking", () => {
   });
 
   it("never oversells a sitting under concurrent load", async () => {
-    const sitting = await pool.query(
-      `insert into sittings (date, start_time, timezone, capacity)
-       values (current_date + 30, '19:00', 'Asia/Kolkata', 10)
-       returning id`,
-    );
-    const slotId: string = sitting.rows[0].id;
+    const slotId = await createTestSitting(pool, { capacity: 10, daysAhead: 30 });
 
     try {
       const attempts = Array.from({ length: 20 }, (_, i) =>
@@ -46,8 +42,7 @@ describe("concurrent booking", () => {
       expect(finalSlot.rows[0].seats_taken).toBe(10);
       expect(finalSlot.rows[0].seats_taken).toBeLessThanOrEqual(finalSlot.rows[0].capacity);
     } finally {
-      await pool.query("delete from bookings where slot_id = $1", [slotId]);
-      await pool.query("delete from sittings where id = $1", [slotId]);
+      await deleteTestSitting(pool, slotId);
     }
   }, 20000);
 });

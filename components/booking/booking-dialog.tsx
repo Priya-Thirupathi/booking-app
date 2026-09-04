@@ -14,9 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton } from "@/components/copy-button";
 import { TurnstileWidget } from "@/components/turnstile-widget";
-import { createBookingRequest, ApiError, type SlotView } from "@/lib/apiClient";
+import { ErrorBanner } from "@/components/error-banner";
+import { createBookingRequest, getErrorMessage, type SlotView } from "@/lib/apiClient";
 import { createBookingSchema } from "@/lib/validation";
 import { formatSittingTime } from "@/lib/formatSitting";
+import { guestWord } from "@/lib/pluralize";
 
 interface FormValues {
   name: string;
@@ -87,7 +89,7 @@ export function BookingDialog({
       // Field-level errors are for validation; a failed submit (slot taken, duplicate booking,
       // rate limit) is a banner, not attributed to any one field — the PRD's states table calls
       // this out specifically: the diner must be told the seats went, not shown a blank retry.
-      setServerError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      setServerError(getErrorMessage(err, "Something went wrong. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +105,7 @@ export function BookingDialog({
             <DialogHeader>
               <DialogTitle>You&apos;re booked</DialogTitle>
               <DialogDescription>
-                {sittingLabel?.restaurantLabel} · {partySize} {partySize === 1 ? "guest" : "guests"}
+                {sittingLabel?.restaurantLabel} · {partySize} {guestWord(partySize)}
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 p-4">
@@ -124,16 +126,12 @@ export function BookingDialog({
             <DialogHeader>
               <DialogTitle>Book this sitting</DialogTitle>
               <DialogDescription>
-                {sittingLabel?.restaurantLabel} · {partySize} {partySize === 1 ? "guest" : "guests"}
+                {sittingLabel?.restaurantLabel} · {partySize} {guestWord(partySize)}
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex flex-col gap-4 py-4">
-              {serverError && (
-                <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {serverError}
-                </p>
-              )}
+              {serverError && <ErrorBanner message={serverError} compact />}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="name">Name</Label>
                 <Input

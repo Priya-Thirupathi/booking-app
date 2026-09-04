@@ -4,8 +4,14 @@ import { createBooking } from "@/lib/booking";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isRateLimited, getClientIp } from "@/lib/rateLimit";
 import { MY_BOOKINGS_COOKIE, addBookingIdToCookie } from "@/lib/cookies";
+import { validationErrorResponse, mappedErrorResponse } from "@/lib/apiResponse";
 
-const REASON_TO_RESPONSE: Record<string, { status: number; message: string }> = {
+// Keyed by the union `lib/booking.ts` actually returns — a missing or misspelled reason here is
+// a compile error, not a runtime KeyError.
+const REASON_TO_RESPONSE: Record<
+  "slot_not_found" | "slot_full" | "already_booked",
+  { status: number; message: string }
+> = {
   slot_not_found: { status: 404, message: "That sitting no longer exists." },
   slot_full: {
     status: 409,
@@ -23,10 +29,7 @@ export async function POST(request: NextRequest) {
   const json = await request.json().catch(() => null);
   const parsed = createBookingSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid_request", message: parsed.error.issues[0]?.message ?? "Invalid request" },
-      { status: 400 },
-    );
+    return validationErrorResponse(parsed.error);
   }
 
   if (await isRateLimited(ip)) {
@@ -54,8 +57,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
-    const mapped = REASON_TO_RESPONSE[result.reason];
-    return NextResponse.json({ error: result.reason, message: mapped.message }, { status: mapped.status });
+    return mappedErrorResponse(REASON_TO_RESPONSE, result.reason);
   }
 
   const response = NextResponse.json({

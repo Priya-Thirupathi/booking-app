@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CopyButton } from "@/components/copy-button";
 import { formatSittingTime } from "@/lib/formatSitting";
-import { cancelBookingRequest, ApiError } from "@/lib/apiClient";
+import { cancelBookingRequest, getErrorMessage } from "@/lib/apiClient";
+import { guestWord } from "@/lib/pluralize";
 import type { BookingView } from "@/lib/bookingView";
 
 export function BookingCard({
@@ -41,7 +42,7 @@ export function BookingCard({
       toast.success("Booking cancelled");
       onCancelled(booking.id);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn't cancel this booking.");
+      toast.error(getErrorMessage(err, "Couldn't cancel this booking."));
     } finally {
       setCancelling(false);
     }
@@ -54,7 +55,7 @@ export function BookingCard({
           <span className="font-medium">{restaurantLabel}</span>
           {viewerLabel && <span className="text-xs text-muted-foreground">{viewerLabel} your time</span>}
           <span className="text-xs text-muted-foreground">
-            {booking.partySize} {booking.partySize === 1 ? "guest" : "guests"} · {booking.name}
+            {booking.partySize} {guestWord(booking.partySize)} · {booking.name}
           </span>
         </div>
         <Badge variant={booking.status === "cancelled" ? "outline" : "secondary"}>
@@ -78,8 +79,8 @@ export function BookingCard({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {restaurantLabel} for {booking.partySize}{" "}
-                    {booking.partySize === 1 ? "guest" : "guests"}. This can&apos;t be undone.
+                    {restaurantLabel} for {booking.partySize} {guestWord(booking.partySize)}. This
+                    can&apos;t be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { lookupBookingSchema } from "@/lib/validation";
 import { findBookingsByReferenceAndEmail } from "@/lib/booking";
 import { toBookingView } from "@/lib/bookingView";
+import { validationErrorResponse } from "@/lib/apiResponse";
 
 export async function GET(request: NextRequest) {
   const parsed = lookupBookingSchema.safeParse({
@@ -9,10 +10,7 @@ export async function GET(request: NextRequest) {
     email: request.nextUrl.searchParams.get("email"),
   });
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid_request", message: parsed.error.issues[0]?.message ?? "Invalid request" },
-      { status: 400 },
-    );
+    return validationErrorResponse(parsed.error);
   }
 
   const rows = await findBookingsByReferenceAndEmail(parsed.data.referenceCode, parsed.data.email);

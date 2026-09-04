@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/error-banner";
 import { BookingCard } from "./booking-card";
 import { LookupForm } from "./lookup-form";
-import { fetchMyBookings, ApiError } from "@/lib/apiClient";
+import { fetchMyBookings, getErrorMessage } from "@/lib/apiClient";
 import { zonedTimeToUtcMs } from "@/lib/time";
+import { useAsyncState } from "@/lib/useAsyncState";
 import type { BookingView } from "@/lib/bookingView";
 
 type ListState =
@@ -19,37 +19,18 @@ function sittingMs(b: BookingView) {
   return zonedTimeToUtcMs(b.date, b.startTime, b.timezone);
 }
 
-// Pure — no setState inside — so the mount effect below only ever sets state inside a `.then()`
-// callback, never synchronously in the effect body (see the identical note in booking-flow.tsx).
+// Pure — no setState inside — see the identical note on useAsyncState.
 async function loadMyBookings(): Promise<ListState> {
   try {
     const res = await fetchMyBookings();
     return { status: "loaded", bookings: res.bookings };
   } catch (err) {
-    return {
-      status: "error",
-      message: err instanceof ApiError ? err.message : "Couldn't load your bookings.",
-    };
+    return { status: "error", message: getErrorMessage(err, "Couldn't load your bookings.") };
   }
 }
 
 export function BookingsFlow() {
-  const [state, setState] = useState<ListState>({ status: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-    loadMyBookings().then((result) => {
-      if (!cancelled) setState(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  function refresh() {
-    setState({ status: "loading" });
-    loadMyBookings().then(setState);
-  }
+  const { state, setState, refresh } = useAsyncState<ListState>(loadMyBookings, { status: "loading" }, []);
 
   function mergeFound(found: BookingView[]) {
     setState((prev) => {
@@ -84,14 +65,7 @@ export function BookingsFlow() {
         </div>
       )}
 
-      {state.status === "error" && (
-        <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-          <p className="text-sm text-destructive">{state.message}</p>
-          <Button variant="outline" size="sm" onClick={refresh}>
-            Try again
-          </Button>
-        </div>
-      )}
+      {state.status === "error" && <ErrorBanner message={state.message} onRetry={refresh} />}
 
       {state.status === "loaded" && <BookingGroups bookings={state.bookings} onCancelled={handleCancelled} />}
 
